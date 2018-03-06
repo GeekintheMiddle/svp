@@ -1,0 +1,10 @@
+server:
+    servername: template
+    UUID: 20
+    memory: 2048
+    smp: 2
+    lvname: template
+    iso: ubuntu-16.04.3-server-amd64.iso
+    int0: macvtap
+    mac0: 00:00:00:00:00:00
+

@@ -1,0 +1,87 @@
+#!/usr/bin/python
+import argparse
+import yaml
+import subprocess
+import time
+
+## Process arguments
+parser = argparse.ArgumentParser(description='SVP Virtual Machine Manager')
+parser.add_argument('--start', action='store', dest='startVM', help='Start Virtual Machine')
+parser.add_argument('--stop', action='store', dest='stopVM', help='Stop Virtual Machine')
+args = parser.parse_args()
+
+if not args.startVM and not args.stopVM:
+    parser.parse_args(['-h'])
+
+def startVM(start):
+    print "Starting virtual machine",start
+
+    configFile = ("/etc/svp/vms/{0}.yml".format(start))
+    with open(configFile, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
+
+    UUID = cfg['server']['UUID']
+    mac0 = cfg['server']['mac0']
+    int0 = cfg['server']['int0']
+    net0 = '{0}{1}'.format(int0,UUID)
+    memory = cfg['server']['memory']
+    smp = cfg['server']['smp']
+    servername =  cfg['server']['servername']
+    lvname = cfg['server']['lvname']
+    iso = cfg['server']['iso']
+
+    createNetwork = 'ip link add link eth0 name macvtap{0} type macvtap'.format(UUID)
+    p1 = subprocess.Popen(createNetwork, shell=True, stdout=subprocess.PIPE)
+    p1.wait();
+    startNetwork = 'ip link set macvtap{0} address {1} up'.format(UUID,mac0)
+    p2 = subprocess.Popen(startNetwork, shell=True, stdout=subprocess.PIPE)
+    p2.wait();
+
+    #Get correct tap device
+    step1 = ['ip', 'a']
+    step2 = ['grep', net0]
+    step3 = ['awk', '{{print $1}}']
+    s1 = subprocess.Popen(step1, stdout=subprocess.PIPE)
+    s2 = subprocess.Popen(step2, stdin=s1.stdout, stdout=subprocess.PIPE)
+    s3 = subprocess.Popen(step3, stdin=s2.stdout, stdout=subprocess.PIPE).stdout
+    tapOutput = s3.read()
+    tap = tapOutput[:-2]
+
+    startMachine = '/usr/bin/qemu-system-x86_64 -daemonize --enable-kvm -cpu host -m {0} -smp {1} -name {2} -vnc 0.0.0.0:{3} -monitor unix:/tmp/{2}.qemu,server,nowait -pidfile /tmp/{2}.pid -drive format=raw,file=/dev/mapper/vmdisks-{4},if=virtio -net nic,netdev=net0,model=virtio,macaddr={5} -netdev tap,id=net0,fd=3 3<>/dev/tap{6} -cdrom /storage/ISO/{7}'.format(memory,smp,servername,UUID,lvname,mac0,tap,iso)
+    p3 = subprocess.Popen(startMachine, shell=True, stdout=subprocess.PIPE)
+    p3.wait();
+
+def stopVM(stop):
+    print "Stopping virtual machine",stop
+    
+    configFile = ("/etc/cubyte/svp/{0}.yml".format(stop))
+    with open(configFile, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
+
+    UUID = cfg['server']['UUID']
+    servername =  cfg['server']['servername']
+    qemuFile = '/tmp/{0}.qemu'.format(servername)
+
+    #Shutdown machine
+    step1 = ['echo', 'system_powerdown']
+    step2 = ['socat', '-', qemuFile]
+    s1 = subprocess.Popen(step1, stdout=subprocess.PIPE)
+    s2 = subprocess.Popen(step2, stdin=s1.stdout, stdout=subprocess.PIPE).stdout
+    output = s2.read()
+    print output
+
+    time.sleep( 5 )
+    #Delete network interface
+    print "Stopping network interface"
+    stopNetwork = 'ip link set macvtap{0} down'.format(UUID)
+    p1 = subprocess.Popen(stopNetwork, shell=True, stdout=subprocess.PIPE)
+    p1.wait();
+    print "Deleting network interface"
+    deleteNetwork = 'ip link del dev macvtap{0}'.format(UUID)
+    p2 = subprocess.Popen(deleteNetwork, shell=True, stdout=subprocess.PIPE)
+    p2.wait();
+
+if args.startVM:
+    startVM(start=args.startVM)
+if args.stopVM:
+    stopVM(stop=args.stopVM)
