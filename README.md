@@ -3,6 +3,7 @@ Qemu/KVM server on OVH network
 
 ### How to install
 ```
+apt-get update & apt-get install qemu-kvm
 cd ~
 git clone https://github.com/GeekintheMiddle/svp.git
 cd svp
