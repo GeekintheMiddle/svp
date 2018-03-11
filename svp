@@ -3,20 +3,28 @@ import argparse
 import yaml
 import subprocess
 import time
+import os
 
 ## Process arguments
 parser = argparse.ArgumentParser(description='SVP Virtual Machine Manager')
 parser.add_argument('--start', action='store', dest='startVM', help='Start Virtual Machine')
 parser.add_argument('--stop', action='store', dest='stopVM', help='Stop Virtual Machine')
+parser.add_argument('--index', action='store_true', dest='index', help='Index all VMs')
 args = parser.parse_args()
 
-if not args.startVM and not args.stopVM:
-    parser.parse_args(['-h'])
+def check_pid(pid):        
+    """ Check For the existence of a unix pid. """
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
 
 def startVM(start):
     print "Starting virtual machine",start
 
-    configFile = ("/etc/svp/vms/{0}.yml".format(start))
+    configFile = ("/etc/cubyte/vms/{0}.yml".format(start))
     with open(configFile, 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
@@ -54,13 +62,14 @@ def startVM(start):
 def stopVM(stop):
     print "Stopping virtual machine",stop
     
-    configFile = ("/etc/cubyte/svp/{0}.yml".format(stop))
+    configFile = ("/etc/cubyte/vms/{0}.yml".format(stop))
     with open(configFile, 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
     UUID = cfg['server']['UUID']
     servername =  cfg['server']['servername']
     qemuFile = '/tmp/{0}.qemu'.format(servername)
+    qemuPID = '/tmp/{0}.pid'.format(servername)
 
     #Shutdown machine
     step1 = ['echo', 'system_powerdown']
@@ -70,18 +79,33 @@ def stopVM(stop):
     output = s2.read()
     print output
 
-    time.sleep( 5 )
-    #Delete network interface
-    print "Stopping network interface"
-    stopNetwork = 'ip link set macvtap{0} down'.format(UUID)
-    p1 = subprocess.Popen(stopNetwork, shell=True, stdout=subprocess.PIPE)
-    p1.wait();
-    print "Deleting network interface"
-    deleteNetwork = 'ip link del dev macvtap{0}'.format(UUID)
-    p2 = subprocess.Popen(deleteNetwork, shell=True, stdout=subprocess.PIPE)
-    p2.wait();
+    with open(qemuPID, 'r') as myfile:
+        pidstr=myfile.read().replace('\n', '')
+    pid = int(pidstr)
+
+    state = True
+    while state == True:
+        output = check_pid(pid)
+        if output == False:
+            state = False
+            print("Server {0} is not running".format(servername))
+            #Delete network interface
+            print "Stopping network interface"
+            stopNetwork = 'ip link set macvtap{0} down'.format(UUID)
+            p1 = subprocess.Popen(stopNetwork, shell=True, stdout=subprocess.PIPE)
+            p1.wait();
+            print "Deleting network interface"
+            deleteNetwork = 'ip link del dev macvtap{0}'.format(UUID)
+            p2 = subprocess.Popen(deleteNetwork, shell=True, stdout=subprocess.PIPE)
+            p2.wait();
+        else:
+            print("Server {0} is still running".format(servername))
+        time.sleep(2)
 
 if args.startVM:
     startVM(start=args.startVM)
 if args.stopVM:
     stopVM(stop=args.stopVM)
+if args.index:
+    print "Indexing virtual machines"
+
