@@ -21,8 +21,9 @@ SVP Virtual Machine Manager
 
 optional arguments:
   -h, --help       show this help message and exit
-  --start STARTVM  Start Virtual Machine
-  --stop STOPVM    Stop Virtual Machine
+  --start STARTVM  	Start Virtual Machine
+  --stop STOPVM    	Stop Virtual Machine
+  --restart RESTARTVM 	Restart Virtual Machine
 ```
 
 ### Examples
@@ -31,6 +32,8 @@ optional arguments:
 svp --start template
 # Stop virtual machine
 svp --stop template
+# Restart virtual machine
+svp --restart template
 ```
 
 ## Authors

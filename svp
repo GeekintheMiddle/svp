@@ -9,6 +9,7 @@ import os
 parser = argparse.ArgumentParser(description='SVP Virtual Machine Manager')
 parser.add_argument('--start', action='store', dest='startVM', help='Start Virtual Machine')
 parser.add_argument('--stop', action='store', dest='stopVM', help='Stop Virtual Machine')
+parser.add_argument('--restart', action='store', dest='restartVM', help='Restart Virtual Machine')
 parser.add_argument('--index', action='store_true', dest='index', help='Index all VMs')
 args = parser.parse_args()
 
@@ -106,6 +107,11 @@ if args.startVM:
     startVM(start=args.startVM)
 if args.stopVM:
     stopVM(stop=args.stopVM)
+if args.restartVM:
+    print("Restarting Virtual Machine {0}".format(args.restartVM))
+    stopVM(stop=args.restartVM)
+    startVM(start=args.restartVM)
+
 if args.index:
-    print "Indexing virtual machines"
+    print "Indexing is not implemented yet."
 
