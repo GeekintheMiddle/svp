@@ -7,4 +7,4 @@ server:
     iso: ubuntu-16.04.3-server-amd64.iso
     int0: macvtap
     mac0: 00:00:00:00:00:00
-
+    disktype: virtio
