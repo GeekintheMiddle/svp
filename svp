@@ -38,6 +38,7 @@ def startVM(start):
     servername =  cfg['server']['servername']
     lvname = cfg['server']['lvname']
     iso = cfg['server']['iso']
+    disktype = cfg['server']['disktype']
 
     createNetwork = 'ip link add link eth0 name macvtap{0} type macvtap'.format(UUID)
     p1 = subprocess.Popen(createNetwork, shell=True, stdout=subprocess.PIPE)
@@ -56,7 +57,7 @@ def startVM(start):
     tapOutput = s3.read()
     tap = tapOutput[:-2]
 
-    startMachine = '/usr/bin/qemu-system-x86_64 -daemonize --enable-kvm -cpu host -m {0} -smp {1} -name {2} -vnc 0.0.0.0:{3} -monitor unix:/tmp/{2}.qemu,server,nowait -pidfile /tmp/{2}.pid -drive format=raw,file=/dev/mapper/vmdisks-{4},if=virtio -net nic,netdev=net0,model=virtio,macaddr={5} -netdev tap,id=net0,fd=3 3<>/dev/tap{6} -cdrom /storage/ISO/{7}'.format(memory,smp,servername,UUID,lvname,mac0,tap,iso)
+    startMachine = '/usr/bin/qemu-system-x86_64 -daemonize --enable-kvm -cpu host -m {0} -smp {1} -name {2} -vnc 0.0.0.0:{3} -monitor unix:/tmp/{2}.qemu,server,nowait -pidfile /tmp/{2}.pid -drive format=raw,file=/dev/mapper/vmdisks-{4},if={5} -net nic,netdev=net0,model=virtio,macaddr={6} -netdev tap,id=net0,fd=3 3<>/dev/tap{7} -cdrom /storage/ISO/{8}'.format(memory,smp,servername,UUID,lvname,disktype,mac0,tap,iso)
     p3 = subprocess.Popen(startMachine, shell=True, stdout=subprocess.PIPE)
     p3.wait();
 
@@ -113,5 +114,5 @@ if args.restartVM:
     startVM(start=args.restartVM)
 
 if args.index:
-    print "Indexing is not implemented yet."
+    print "Indexing virtual machines"
 
